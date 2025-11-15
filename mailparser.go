@@ -3,6 +3,7 @@
 package mailparser
 
 import (
+	"strings"
 	"time"
 )
 
@@ -155,15 +156,8 @@ func canonicalHeader(name string) string {
 
 // toLower converts a string to lowercase.
 func toLower(s string) string {
-	b := make([]byte, len(s))
-	for i := 0; i < len(s); i++ {
-		c := s[i]
-		if 'A' <= c && c <= 'Z' {
-			c += 'a' - 'A'
-		}
-		b[i] = c
-	}
-	return string(b)
+	// Use stdlib for better performance - it's optimized with assembly
+	return strings.ToLower(s)
 }
 
 // Parser is the main email parser.

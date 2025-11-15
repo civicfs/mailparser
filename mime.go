@@ -164,10 +164,10 @@ func parseAddressList(header string) ([]*Address, error) {
 
 // parseAddresses is a simple email address parser
 func parseAddresses(input string) []*Address {
-	var addresses []*Address
-
 	// Split by comma, but respect quoted strings and angle brackets
 	parts := splitAddresses(input)
+	
+	addresses := make([]*Address, 0, len(parts)) // Pre-allocate with capacity
 
 	for _, part := range parts {
 		part = strings.TrimSpace(part)
@@ -220,7 +220,10 @@ func parseAddress(input string) *Address {
 
 // splitAddresses splits an address list by commas, respecting quotes and brackets
 func splitAddresses(input string) []string {
-	var parts []string
+	// Estimate number of addresses (count commas + 1)
+	estimatedParts := strings.Count(input, ",") + 1
+	parts := make([]string, 0, estimatedParts)
+	
 	var current bytes.Buffer
 	inQuotes := false
 	inBrackets := false
@@ -283,7 +286,7 @@ func parseReferences(header string) []string {
 	header = decodeHeader(header)
 	parts := strings.Fields(header)
 
-	var refs []string
+	refs := make([]string, 0, len(parts)) // Pre-allocate with capacity
 	for _, part := range parts {
 		id := ensureMessageIDFormat(part)
 		if id != "" {

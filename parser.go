@@ -77,7 +77,7 @@ func (p *Parser) ParseBytes(data []byte) (*Mail, error) {
 	// Create mail structure
 	mail := &Mail{
 		Headers:     headers,
-		Attachments: make([]*Attachment, 0),
+		Attachments: make([]*Attachment, 0, 4), // Pre-allocate for common case of few attachments
 	}
 
 	// Extract common headers
