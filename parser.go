@@ -295,7 +295,8 @@ func (p *Parser) parseSinglePart(mail *Mail, headers Headers, body []byte, isMai
 	transferEncoding := getTransferEncoding(headers)
 	decoded, err := decodeTransferEncoding(body, transferEncoding)
 	if err != nil {
-		return err
+		// If transfer decoding fails, use original data (be resilient)
+		decoded = body
 	}
 
 	// Check if this should be treated as an attachment
