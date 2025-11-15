@@ -1,0 +1,19 @@
+goos: linux
+goarch: amd64
+pkg: github.com/civicfs/mailparser
+cpu: AMD EPYC 7763 64-Core Processor                
+BenchmarkParseSimpleEmail-4           	  134912	      8899 ns/op	    7216 B/op	      48 allocs/op
+BenchmarkParseMultipart-4             	   89620	     13807 ns/op	   16001 B/op	      88 allocs/op
+BenchmarkParseWithAttachment-4        	   78052	     15187 ns/op	   19760 B/op	     108 allocs/op
+BenchmarkParseBase64Decoding-4        	   45212	     26368 ns/op	   12301 B/op	      40 allocs/op
+BenchmarkParseQuotedPrintable-4       	   63372	     18747 ns/op	   12853 B/op	      39 allocs/op
+BenchmarkParseAddressList-4           	 1254534	       958.2 ns/op	     432 B/op	      11 allocs/op
+BenchmarkDecodeHeader-4               	 7433030	       160.5 ns/op	      72 B/op	       3 allocs/op
+BenchmarkParseRealEmail-4             	   40832	     29414 ns/op	   34512 B/op	     144 allocs/op
+BenchmarkParseLargeEmail-4            	   10000	    102301 ns/op	   58063 B/op	     333 allocs/op
+BenchmarkCharsetDecoding-4            	33431038	        34.23 ns/op	      24 B/op	       1 allocs/op
+BenchmarkParseSimpleEmailParallel-4   	  266440	      4597 ns/op	    7213 B/op	      46 allocs/op
+BenchmarkParseMultipartParallel-4     	  157417	      7354 ns/op	   15784 B/op	      86 allocs/op
+BenchmarkParseSimple-4                	   40953	     29317 ns/op	   34490 B/op	     144 allocs/op
+PASS
+ok  	github.com/civicfs/mailparser	18.120s
