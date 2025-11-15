@@ -45,8 +45,7 @@ func (p *Parser) ParseBytes(data []byte) (*Mail, error) {
 	// Extract header and body sections
 	var headerData, body []byte
 	if headerEnd >= 0 {
-		// Include the newline after headers for proper parsing
-		headerData = data[:bodyStart-2]
+		headerData = data[:headerEnd]
 		body = data[bodyStart:]
 	} else {
 		// No body separator found, treat entire content as headers
@@ -54,9 +53,18 @@ func (p *Parser) ParseBytes(data []byte) (*Mail, error) {
 		body = []byte{}
 	}
 
-	// Parse headers - need to add a trailing newline if not present
-	if len(headerData) > 0 && headerData[len(headerData)-1] != '\n' {
-		headerData = append(headerData, '\n')
+	// Ensure header data ends with double newline for proper MIME header parsing
+	if len(headerData) > 0 {
+		// Add blank line if not present
+		if !bytes.HasSuffix(headerData, []byte("\r\n\r\n")) && !bytes.HasSuffix(headerData, []byte("\n\n")) {
+			if bytes.HasSuffix(headerData, []byte("\r\n")) {
+				headerData = append(headerData, []byte("\r\n")...)
+			} else if bytes.HasSuffix(headerData, []byte("\n")) {
+				headerData = append(headerData, '\n')
+			} else {
+				headerData = append(headerData, []byte("\n\n")...)
+			}
+		}
 	}
 
 	// Parse headers

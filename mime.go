@@ -26,7 +26,7 @@ func newMimeParser(r io.Reader) *mimeParser {
 // parseHeaders reads and parses email headers
 func (m *mimeParser) parseHeaders() (Headers, error) {
 	mimeHeader, err := m.reader.ReadMIMEHeader()
-	if err != nil {
+	if err != nil && err != io.EOF {
 		return nil, err
 	}
 
