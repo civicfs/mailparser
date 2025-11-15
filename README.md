@@ -29,9 +29,23 @@ A high-performance, feature-complete email parser for Go, refactored from the or
 
 ## Installation
 
+### Basic Installation
+
 ```bash
-go get github.com/nodemailer/mailparser
+# Get the latest version
+go get github.com/civicfs/mailparser@latest
+
+# Or get a specific version
+go get github.com/civicfs/mailparser@v1.0.0
 ```
+
+### Version Management
+
+To specify which version to use in your Go project, see the [detailed usage guide](USAGE.md) which covers:
+- Installing specific versions
+- Setting default versions in `go.mod`
+- Version management best practices
+- Updating dependencies
 
 ## Quick Start
 
@@ -41,7 +55,7 @@ package main
 import (
     "fmt"
     "os"
-    "github.com/nodemailer/mailparser"
+    "github.com/civicfs/mailparser"
 )
 
 func main() {
@@ -461,6 +475,12 @@ Contributions welcome! Potential enhancement areas:
 3. DKIM signature validation integration
 4. Delivery status message parsing
 5. Performance benchmarks on more diverse email corpuses
+
+## Documentation
+
+- [Detailed Usage Guide](USAGE.md) - Comprehensive guide covering installation, version management, and advanced usage
+- [API Reference](https://pkg.go.dev/github.com/civicfs/mailparser) - Full API documentation
+- [Examples](USAGE.md#complete-example) - Complete working examples
 
 ## License
 
