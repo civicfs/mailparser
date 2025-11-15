@@ -1,4 +1,4 @@
-module github.com/nodemailer/mailparser
+module github.com/civicfs/mailparser
 
 go 1.25.0
 

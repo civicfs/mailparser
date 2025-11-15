@@ -1,6 +1,7 @@
 package mailparser
 
 import (
+	"encoding/base64"
 	"io"
 	"regexp"
 	"strings"
@@ -69,14 +70,26 @@ func extractText(n *html.Node, buf *strings.Builder) {
 	}
 }
 
+var (
+	// Pre-compiled regex patterns for better performance
+	whiteSpaceRegex      = regexp.MustCompile(`[^\S\n]+`)
+	multipleNewlinesRegex = regexp.MustCompile(`\n{3,}`)
+	trailingSpacesRegex  = regexp.MustCompile(` +\n`)
+	urlRegex             = regexp.MustCompile(`\b(https?://[^\s<>"{}|\\^` + "`" + `\[\]]+)`)
+	emailRegex           = regexp.MustCompile(`\b([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})`)
+	wwwRegex             = regexp.MustCompile(`\b(www\.[^\s<>"{}|\\^` + "`" + `\[\]]+)`)
+	cidRegex             = regexp.MustCompile(`cid:([^'"\s<>]+)`)
+	htmlTagRegex         = regexp.MustCompile(`<[^>]*>`)
+)
+
 // normalizeWhitespace cleans up excessive whitespace
 func normalizeWhitespace(s string) string {
 	// Replace multiple spaces with single space
-	s = regexp.MustCompile(`[^\S\n]+`).ReplaceAllString(s, " ")
+	s = whiteSpaceRegex.ReplaceAllString(s, " ")
 	// Replace more than 2 newlines with 2
-	s = regexp.MustCompile(`\n{3,}`).ReplaceAllString(s, "\n\n")
+	s = multipleNewlinesRegex.ReplaceAllString(s, "\n\n")
 	// Remove trailing spaces before newlines
-	s = regexp.MustCompile(` +\n`).ReplaceAllString(s, "\n")
+	s = trailingSpacesRegex.ReplaceAllString(s, "\n")
 	return s
 }
 
@@ -125,36 +138,37 @@ func TextToHTML(text string, linkify bool) string {
 	return "<p>" + strings.Join(paragraphs, "</p><p>") + "</p>"
 }
 
+// htmlEscaper is a pre-compiled replacer for HTML escaping
+var htmlEscaper = strings.NewReplacer(
+	"&", "&amp;",
+	"<", "&lt;",
+	">", "&gt;",
+	"\"", "&quot;",
+	"'", "&#39;",
+)
+
 // htmlEscape escapes HTML special characters
 func htmlEscape(s string) string {
-	s = strings.ReplaceAll(s, "&", "&amp;")
-	s = strings.ReplaceAll(s, "<", "&lt;")
-	s = strings.ReplaceAll(s, ">", "&gt;")
-	s = strings.ReplaceAll(s, "\"", "&quot;")
-	s = strings.ReplaceAll(s, "'", "&#39;")
-	return s
+	return htmlEscaper.Replace(s)
 }
 
 // linkifyText detects and converts URLs and email addresses to links
 func linkifyText(text string) string {
 	// URL pattern - detect http(s):// and common URLs
-	urlPattern := regexp.MustCompile(`\b(https?://[^\s<>"{}|\\^` + "`" + `\[\]]+)`)
-	text = urlPattern.ReplaceAllStringFunc(text, func(url string) string {
+	text = urlRegex.ReplaceAllStringFunc(text, func(url string) string {
 		// Clean up trailing punctuation
 		url = strings.TrimRight(url, ".,;:!?)")
 		return `<a href="` + url + `">` + url + `</a>`
 	})
 
 	// Email pattern
-	emailPattern := regexp.MustCompile(`\b([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})`)
-	text = emailPattern.ReplaceAllStringFunc(text, func(email string) string {
+	text = emailRegex.ReplaceAllStringFunc(text, func(email string) string {
 		// Don't linkify if already in a link
 		return `<a href="mailto:` + email + `">` + email + `</a>`
 	})
 
 	// www. URLs (without http://)
-	wwwPattern := regexp.MustCompile(`\b(www\.[^\s<>"{}|\\^` + "`" + `\[\]]+)`)
-	text = wwwPattern.ReplaceAllStringFunc(text, func(url string) string {
+	text = wwwRegex.ReplaceAllStringFunc(text, func(url string) string {
 		url = strings.TrimRight(url, ".,;:!?)")
 		return `<a href="http://` + url + `">` + url + `</a>`
 	})
@@ -169,7 +183,7 @@ func (p *Parser) UpdateImageLinks(mail *Mail, replaceFunc func(*Attachment) (str
 	}
 
 	// Build a map of CID to attachment
-	cidMap := make(map[string]*Attachment)
+	cidMap := make(map[string]*Attachment, len(mail.Attachments))
 	for _, att := range mail.Attachments {
 		if att.CID != "" && strings.HasPrefix(att.ContentType, "image/") {
 			cidMap[att.CID] = att
@@ -182,10 +196,9 @@ func (p *Parser) UpdateImageLinks(mail *Mail, replaceFunc func(*Attachment) (str
 
 	// Find and replace cid: references
 	html := mail.HTML
-	cidPattern := regexp.MustCompile(`cid:([^'"\s<>]+)`)
 
 	var lastErr error
-	html = cidPattern.ReplaceAllStringFunc(html, func(match string) string {
+	html = cidRegex.ReplaceAllStringFunc(html, func(match string) string {
 		cid := strings.TrimPrefix(match, "cid:")
 		if att, ok := cidMap[cid]; ok {
 			if replaceFunc != nil {
@@ -210,36 +223,8 @@ func (p *Parser) UpdateImageLinks(mail *Mail, replaceFunc func(*Attachment) (str
 
 // base64Encode encodes bytes to base64 string
 func base64Encode(data []byte) string {
-	const base64Table = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
-
-	var result strings.Builder
-	result.Grow((len(data) + 2) / 3 * 4)
-
-	for i := 0; i < len(data); i += 3 {
-		b := [3]byte{}
-		n := 0
-		for j := 0; j < 3 && i+j < len(data); j++ {
-			b[j] = data[i+j]
-			n++
-		}
-
-		result.WriteByte(base64Table[(b[0]&0xFC)>>2])
-		result.WriteByte(base64Table[((b[0]&0x03)<<4)|((b[1]&0xF0)>>4)])
-
-		if n > 1 {
-			result.WriteByte(base64Table[((b[1]&0x0F)<<2)|((b[2]&0xC0)>>6)])
-		} else {
-			result.WriteByte('=')
-		}
-
-		if n > 2 {
-			result.WriteByte(base64Table[b[2]&0x3F])
-		} else {
-			result.WriteByte('=')
-		}
-	}
-
-	return result.String()
+	// Use stdlib for better performance and correctness
+	return base64.StdEncoding.EncodeToString(data)
 }
 
 // ParseHTMLLinks extracts links from HTML content
@@ -274,7 +259,7 @@ func StripHTML(htmlContent string) string {
 	text, err := HTMLToText(htmlContent)
 	if err != nil {
 		// Fallback: simple tag stripping
-		return regexp.MustCompile(`<[^>]*>`).ReplaceAllString(htmlContent, "")
+		return htmlTagRegex.ReplaceAllString(htmlContent, "")
 	}
 	return text
 }

@@ -66,7 +66,8 @@ func decodeQuotedPrintable(data []byte) ([]byte, error) {
 
 // removeWhitespace removes whitespace characters from byte slice
 func removeWhitespace(data []byte) []byte {
-	var result []byte
+	// Pre-allocate with estimated capacity (usually ~75% of input is non-whitespace)
+	result := make([]byte, 0, len(data)*3/4)
 	for _, b := range data {
 		if b != ' ' && b != '\t' && b != '\r' && b != '\n' {
 			result = append(result, b)
