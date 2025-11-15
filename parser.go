@@ -323,11 +323,37 @@ func (p *Parser) parseSinglePart(mail *Mail, headers Headers, body []byte, isMai
 
 	text = normalizeLineEndings(text)
 
+	// Check for format=flowed
+	if params["format"] == "flowed" {
+		delSp := params["delsp"] == "yes"
+		decoder := NewFlowedDecoder(delSp)
+		text = decoder.Decode(text)
+	}
+
 	// Store based on content type
 	if contentType == "text/plain" {
 		mail.Text = text
+
+		// Generate TextAsHTML if needed
+		if !p.SkipTextToHTML {
+			mail.TextAsHTML = TextToHTML(text, !p.SkipTextLinks)
+		}
 	} else if contentType == "text/html" {
 		mail.HTML = text
+
+		// Generate text version from HTML if no text exists
+		if !p.SkipHTMLToText && mail.Text == "" {
+			if int64(len(text)) > p.MaxHTMLLength {
+				return fmt.Errorf("HTML too long for parsing: %d bytes", len(text))
+			}
+			plainText, err := HTMLToText(text)
+			if err != nil {
+				// Don't fail, just skip HTML to text conversion
+				mail.Text = ""
+			} else {
+				mail.Text = plainText
+			}
+		}
 	}
 
 	return nil
@@ -439,3 +465,23 @@ func parsePriority(headers Headers) string {
 
 	return "normal"
 }
+
+
+// SimpleParser parses an email with default settings and CID replacement
+func SimpleParser(r io.Reader, keepCIDLinks bool) (*Mail, error) {
+	parser := NewParser()
+	parser.KeepCIDLinks = keepCIDLinks
+	
+	mail, err := parser.Parse(r)
+	if err != nil {
+		return nil, err
+	}
+	
+	// Replace CID links with data URIs unless keepCIDLinks is true
+	if !keepCIDLinks && mail.HTML != "" {
+		_ = parser.UpdateImageLinks(mail, nil)
+	}
+	
+	return mail, nil
+}
+

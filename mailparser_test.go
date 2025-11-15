@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-func TestSimpleParser(t *testing.T) {
+func TestParseFromFile(t *testing.T) {
 	tests := []struct {
 		name     string
 		filename string

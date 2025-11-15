@@ -9,6 +9,10 @@ import (
 
 	"golang.org/x/text/encoding"
 	"golang.org/x/text/encoding/charmap"
+	"golang.org/x/text/encoding/japanese"
+	"golang.org/x/text/encoding/korean"
+	"golang.org/x/text/encoding/simplifiedchinese"
+	"golang.org/x/text/encoding/traditionalchinese"
 	"golang.org/x/text/encoding/unicode"
 	"golang.org/x/text/transform"
 )
@@ -172,8 +176,29 @@ func getCharsetDecoder(charset string) encoding.Encoding {
 	case "macintosh", "mac-roman":
 		return charmap.Macintosh
 
-	// For other encodings, we'd need to add more packages
-	// For now, return nil for unsupported encodings
+	// Japanese encodings
+	case "iso-2022-jp", "iso2022jp":
+		return japanese.ISO2022JP
+	case "euc-jp", "eucjp":
+		return japanese.EUCJP
+	case "shift-jis", "shift jis", "shiftjis", "sjis":
+		return japanese.ShiftJIS
+
+	// Korean encodings
+	case "euc-kr", "euckr":
+		return korean.EUCKR
+
+	// Chinese encodings
+	case "gb2312", "gb-2312":
+		return simplifiedchinese.HZGB2312
+	case "gbk":
+		return simplifiedchinese.GBK
+	case "gb18030":
+		return simplifiedchinese.GB18030
+	case "big5", "big-5":
+		return traditionalchinese.Big5
+
+	// For other encodings, return nil for unsupported encodings
 	default:
 		return nil
 	}
